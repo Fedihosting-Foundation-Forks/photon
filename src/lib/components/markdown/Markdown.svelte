@@ -1,136 +1,115 @@
-<script lang="ts">
-  import { page } from '$app/stores'
-  import { env } from '$env/dynamic/public'
-  import { md, mdInline, photonify } from '$lib/components/markdown/markdown'
-  import { onMount } from 'svelte'
+<script lang="ts" context="module">
+  import { marked } from 'marked'
+  import {
+    MdCode,
+    MdHeading,
+    MdHr,
+    MdHtml,
+    MdImage,
+    MdLink,
+    MdQuote,
+    MdList,
+    MdTable,
+    MdTableBody,
+    MdSpoiler,
+    MdTableCell,
+    MdTableHead,
+    MdTableRow,
+    MdParagraph,
+    MdListItem,
+    MdSubscript,
+    MdSuperscript,
+  } from './renderers/index'
+  import { linkify, subSupscriptExtension } from './renderers/plugins'
+  import containerExtension from './renderers/spoiler/spoiler'
 
-  export let source: string = ''
-  export let inline: boolean = false
-  export let noStyle: boolean = false
-
-  let rendered = ''
-
-  function replaceURLs(node: HTMLElement, source: string) {
-    if (!div) return
-    const links = node.querySelectorAll('a')
-
-    links.forEach((l) => {
-      const photonified = photonify(l.href)
-
-      if (photonified) l.href = photonified
-      else if (!l.href.startsWith($page.url.origin)) {
-        l.target = '_blank'
-        l.rel = 'noopener noreferrer'
-      }
-    })
+  export const options: any = {
+    mangle: false,
+    headerIds: false,
+    pedantic: false,
   }
 
-  let div: HTMLElement
+  marked.setOptions(options)
 
-  function render(source: string): string {
-    if (!source || source == '') return ''
+  marked.use(linkify, {
+    extensions: [
+      containerExtension((params: any) => {
+        if (params.type == 'spoiler') {
+          return {
+            type: 'spoiler',
+            raw: params.raw,
+            title: params.options,
+            tokens: [],
+          }
+        }
+        return null
+      }),
+      subSupscriptExtension((params: any) => {
+        if (params.type == 'subscript') {
+          return {
+            type: 'subscript',
+            raw: params.raw,
+            text: params.content,
+          }
+        }
+        if (params.type == 'superscript') {
+          return {
+            type: 'superscript',
+            raw: params.raw,
+            text: params.content,
+          }
+        }
+        return null
+      }),
+    ],
+  })
 
-    try {
-      return inline ? mdInline.render(source) : md.render(source)
-    } catch (err) {
-      console.error(err)
-      return ''
-    }
-  }
-  $: rendered = render(source)
-  $: replaceURLs(div, rendered)
-  /*
-    Horrendous hack to get @html reactivity working
-    From server to client, the rendered html won't change for some reason
-    I have no clue why this fixes it, but it does.
-  */
-  if (env?.PUBLIC_SSR_ENABLED?.toLowerCase() == 'true') {
-    onMount(() => {
-      rendered = `${rendered} `
-      replaceURLs(div, rendered)
-    })
+  export const renderers = {
+    heading: MdHeading,
+    image: MdImage,
+    link: MdLink,
+    blockquote: MdQuote,
+    hr: MdHr,
+    html: MdHtml,
+    code: MdCode,
+    list: MdList,
+    // @ts-ignore
+    spoiler: MdSpoiler,
+    table: MdTable,
+    tablebody: MdTableBody,
+    tablecell: MdTableCell,
+    tablehead: MdTableHead,
+    tablerow: MdTableRow,
+    paragraph: MdParagraph,
+    listitem: MdListItem,
+    subscript: MdSubscript,
+    superscript: MdSuperscript,
   }
 </script>
 
+<script lang="ts">
+  import SvelteMarkdown from 'svelte-markdown'
+
+  export let source: string = ''
+  export let inline: boolean = false
+
+  options.inline = inline
+
+  export let noStyle: boolean = false
+
+  $: tokens = marked.lexer(source)
+</script>
+
 <div
-  bind:this={div}
   class="{noStyle
     ? ''
-    : 'break-words flex flex-col markdown gap-2 leading-[1.5]'} {$$props.class}"
+    : 'break-words flex flex-col gap-2 leading-[1.5]'} {$$props.class}"
   style={$$props.style}
 >
-  {@html rendered}
+  <SvelteMarkdown
+    bind:source={tokens}
+    {renderers}
+    {options}
+    isInline={inline || undefined}
+  />
 </div>
-
-<style lang="postcss">
-  .markdown :global(h1) {
-    @apply text-3xl font-bold;
-  }
-  .markdown :global(h2) {
-    @apply text-2xl font-bold;
-  }
-  .markdown :global(h3) {
-    @apply text-xl font-bold;
-  }
-
-  .markdown :global(details) {
-    @apply cursor-pointer;
-  }
-
-  .markdown :global(hr) {
-    @apply w-full mx-auto my-2 border-slate-300 dark:border-zinc-800;
-  }
-
-  :global(.dark .markdown hr) {
-    @apply w-full mx-auto my-2 border-zinc-800;
-  }
-
-  .markdown :global(img) {
-    @apply max-h-[40vh] border rounded-md border-slate-200 dark:border-zinc-800;
-  }
-
-  :global(.dark .markdown img) {
-    @apply border-zinc-800;
-  }
-
-  .markdown :global(a) {
-    @apply text-sky-500 hover:underline;
-  }
-
-  .markdown :global(ul) {
-    @apply list-disc pl-4 leading-3;
-  }
-
-  .markdown :global(ol) {
-    @apply list-decimal pl-4 leading-3;
-  }
-
-  .markdown :global(ul > *) {
-    @apply leading-[20px];
-  }
-
-  .markdown :global(ol > *) {
-    @apply leading-[20px];
-  }
-
-  .markdown :global(li) {
-    @apply m-0 leading-[1.5] !important;
-  }
-
-  .markdown :global(li > p) {
-    @apply m-0 leading-[1.5] !important;
-  }
-
-  .markdown :global(li > p) {
-    @apply contents !important;
-  }
-
-  .markdown :global(blockquote) {
-    @apply leading-[1px] border-l-2 border-slate-400 dark:border-zinc-600 pl-2 my-1 h-max;
-  }
-
-  .markdown :global(p) {
-    @apply leading-[1.5] max-w-3xl;
-    word-break: break-word;
-  }
-</style>

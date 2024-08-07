@@ -6,8 +6,6 @@
   import 'nprogress/nprogress.css'
   import Moderation from '$lib/components/lemmy/moderation/Moderation.svelte'
   import Sidebar from '$lib/components/ui/sidebar/Sidebar.svelte'
-  // @ts-ignore
-  import { pwaInfo } from 'virtual:pwa-info'
   import {
     colorScheme,
     inDarkColorScheme,
@@ -16,7 +14,13 @@
     themeVars,
   } from '$lib/ui/colors.js'
   import { userSettings } from '$lib/settings.js'
-  import { Button, ModalContainer, Spinner, ToastContainer } from 'mono-svelte'
+  import {
+    Button,
+    ModalContainer,
+    Spinner,
+    toast,
+    ToastContainer,
+  } from 'mono-svelte'
   import { onMount } from 'svelte'
   import { browser } from '$app/environment'
   import { Forward, Icon } from 'svelte-hero-icons'
@@ -34,6 +38,7 @@
     trickleSpeed: 200,
     easing: 'ease-out',
     speed: 300,
+    showSpinner: false,
   })
 
   let barTimeout: any = 0
@@ -41,16 +46,16 @@
   $: {
     if (browser) {
       if ($navigating) {
+        document.body.classList.toggle('wait', true)
         barTimeout = setTimeout(() => nProgress.start(), 100)
       }
       if (!$navigating) {
+        document.body.classList.toggle('wait', false)
         clearTimeout(barTimeout)
         nProgress.done()
       }
     }
   }
-
-  $: webManifest = pwaInfo ? pwaInfo.webManifest.linkTag : ''
 
   onMount(() => {
     if (browser) {
@@ -85,7 +90,6 @@
       })
     }
   })
-  $: title = routes[($page.route.id as keyof typeof routes) ?? '']
 </script>
 
 <svelte:head>
@@ -106,7 +110,6 @@
       <meta name="description" content="A sleek client for Lemmy" />
     {/if}
   {/if}
-  {@html webManifest}
 </svelte:head>
 
 <Button
@@ -145,14 +148,7 @@
   >
     <slot />
   </main>
-  <Navbar
-    slot="navbar"
-    let:style={s}
-    let:class={c}
-    class={c}
-    style={s}
-    {title}
-  />
+  <Navbar slot="navbar" let:style={s} let:class={c} class={c} style={s} />
   <div slot="suffix" let:class={c} let:style={s} class={c} style={s}>
     {#if $page.data.slots?.sidebar?.component}
       <svelte:component

@@ -4,7 +4,13 @@
   import { userSettings } from '$lib/settings'
   import { searchParam } from '$lib/util'
   import { Select } from 'mono-svelte'
-  import { GlobeAmericas, Icon } from 'svelte-hero-icons'
+  import {
+    GlobeAmericas,
+    Icon,
+    MapPin,
+    Newspaper,
+    ShieldCheck,
+  } from 'svelte-hero-icons'
   import { amModOfAny } from '../moderation/moderation'
   import { t } from '$lib/translations'
 
@@ -33,20 +39,47 @@
   <svelte:fragment slot="label">
     {#if showLabel}
       <span class="flex items-center gap-1">
-        <Icon src={GlobeAmericas} size="16" mini />
+        <Icon src={GlobeAmericas} size="16" micro />
         {$t('filter.location.label')}
       </span>
     {/if}
   </svelte:fragment>
-  <option value="All">{$t('filter.location.all')}</option>
-  <option value="Local">{$t('filter.location.local')}</option>
+  <option value="All">
+    <Icon
+      src={GlobeAmericas}
+      size="16"
+      micro
+      class="text-slate-600 dark:text-zinc-400"
+    />
+    {$t('filter.location.all')}
+  </option>
+  <option value="Local">
+    <Icon
+      src={MapPin}
+      size="16"
+      micro
+      class="text-slate-600 dark:text-zinc-400"
+    />{$t('filter.location.local')}
+  </option>
   <option value="Subscribed" disabled={$profile?.jwt == undefined}>
+    <Icon
+      src={Newspaper}
+      size="16"
+      micro
+      class="text-slate-600 dark:text-zinc-400"
+    />
     {$t('filter.location.subscribed')}
   </option>
   <option
     value="ModeratorView"
     disabled={!$profile?.jwt || !amModOfAny($profile?.user)}
   >
+    <Icon
+      src={ShieldCheck}
+      size="16"
+      micro
+      class="text-slate-600 dark:text-zinc-400"
+    />
     {$t('filter.location.moderator')}
   </option>
 </Select>

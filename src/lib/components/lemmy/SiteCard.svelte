@@ -19,6 +19,7 @@
   import { userLink } from '$lib/lemmy/generic'
   import { t } from '$lib/translations'
   import Entity from '../ui/Entity.svelte'
+  import { userSettings } from '$lib/settings'
 
   export let site: SiteView
   export let taglines: Tagline[] | undefined = undefined
@@ -74,9 +75,9 @@
       />
     {/if}
 
-    <Expandable>
+    <Expandable bind:open={$userSettings.expand.about}>
       <svelte:fragment slot="title">
-        <Icon src={InformationCircle} size="15" mini />
+        <Icon src={InformationCircle} size="16" mini />
         {$t('cards.site.about')}
       </svelte:fragment>
       <Markdown source={site.site.description} />
@@ -84,9 +85,9 @@
       <Markdown source={site.site.sidebar} />
     </Expandable>
 
-    <Expandable>
+    <Expandable bind:open={$userSettings.expand.stats}>
       <svelte:fragment slot="title">
-        <Icon src={ChartBar} size="15" mini />
+        <Icon src={ChartBar} size="16" mini />
         {$t('cards.site.stats')}
       </svelte:fragment>
       <div class="flex flex-row gap-4 flex-wrap">
@@ -109,9 +110,9 @@
     </Expandable>
 
     {#if admins}
-      <Expandable>
+      <Expandable bind:open={$userSettings.expand.team}>
         <svelte:fragment slot="title">
-          <Icon src={UserGroup} size="15" mini />
+          <Icon src={UserGroup} size="16" mini />
           {$t('cards.site.admins')}
         </svelte:fragment>
         <ItemList

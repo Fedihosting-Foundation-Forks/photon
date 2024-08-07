@@ -19,11 +19,15 @@
     let extracted: Tag[] = []
 
     title = title.replace(/\[(.*?)\]/g, (match, content) => {
-      extracted.push(
-        textToTag.get(content) ?? {
-          content: content,
-        }
-      )
+      const contents = content.split(',').map((part: string) => part.trim())
+
+      contents.forEach((content: string) => {
+        extracted.push(
+          textToTag.get(content) ?? {
+            content: content,
+          }
+        )
+      })
       return ''
     })
 
@@ -59,7 +63,7 @@
   import { userSettings, type View } from '$lib/settings'
   import Markdown from '$lib/components/markdown/Markdown.svelte'
   import { t } from '$lib/translations'
-  import type { IconSource } from 'svelte-hero-icons'
+  import { Pencil, type IconSource } from 'svelte-hero-icons'
 
   export let community: Community | undefined = undefined
   export let showCommunity: boolean = true
@@ -70,6 +74,7 @@
   export let title: string | undefined = undefined
   export let id: number | undefined = undefined
   export let read: boolean = false
+  export let edited: boolean = false
 
   export let view: View = 'cozy'
 
@@ -168,6 +173,9 @@
     {#if published}
       <RelativeDate date={published} class="flex-shrink-0" />
     {/if}
+    {#if edited}
+      <Icon src={Pencil} micro size="14" />
+    {/if}
   </span>
   <div
     class="flex flex-row justify-end items-center self-center flex-wrap gap-2 [&>*]:flex-shrink-0 badges ml-2"
@@ -251,7 +259,7 @@
     hover:text-primary-900 hover:dark:text-primary-100 transition-colors
     {$userSettings.font == 'satoshi/nunito'
       ? 'font-display font-semibold'
-      : 'font-medium'}"
+      : 'font-medium'} {$$props.titleClass ?? ''}"
     class:text-slate-600={$userSettings.markReadPosts && read}
     class:dark:text-zinc-400={$userSettings.markReadPosts && read}
     class:text-base={view == 'compact'}

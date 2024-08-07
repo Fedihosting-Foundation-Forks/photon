@@ -7,6 +7,7 @@
     Bookmark,
     BookmarkSlash,
     BugAnt,
+    ChatBubbleLeftEllipsis,
     ChatBubbleOvalLeft,
     ChatBubbleOvalLeftEllipsis,
     CheckBadge,
@@ -14,15 +15,13 @@
     Eye,
     EyeSlash,
     Flag,
-    GlobeAlt,
-    Home,
     Icon,
     Language,
     Newspaper,
     PencilSquare,
-    Scale,
     ServerStack,
     Share,
+    Star,
     Trash,
     UserCircle,
     XMark,
@@ -36,12 +35,7 @@
   } from '$lib/components/lemmy/moderation/moderation.js'
   import ModerationMenu from '$lib/components/lemmy/moderation/ModerationMenu.svelte'
   import { profile } from '$lib/auth.js'
-  import {
-    contentView,
-    deleteItem,
-    markAsRead,
-    save,
-  } from '$lib/lemmy/contentview.js'
+  import { deleteItem, markAsRead, save } from '$lib/lemmy/contentview.js'
   import { setSessionStorage } from '$lib/session.js'
   import { goto } from '$app/navigation'
   import { userSettings, type View } from '$lib/settings.js'
@@ -55,17 +49,15 @@
     toast,
   } from 'mono-svelte'
   import { fediseer, type Data } from '$lib/fediseer/fediseer'
-  import Fediseer from '$lib/fediseer/Fediseer.svelte'
   import { t } from '$lib/translations'
   import { text } from '$lib/components/translate/translation'
-  import Translation from '$lib/components/translate/Translation.svelte'
-  import { hidePost, postLink, type MediaType } from './helpers'
+  import { hidePost, postLink } from './helpers'
   import { feature } from '$lib/version'
   import Switch from '$lib/components/input/Switch.svelte'
   import { instanceToURL } from '$lib/util'
+  import { publishedToDate } from '$lib/components/util/date'
 
   export let post: PostView
-  export let type: MediaType | undefined = undefined
   export let view: View = 'cozy'
   export let debug: boolean = false
 
@@ -82,17 +74,14 @@
 
   let localShare = false
 
-  let mediaBias = false
-
-  const stripSubdomain = (url: string) =>
-    new URL(url).hostname.split('.').slice(-2).join('.')
-
   $: buttonHeight = view == 'compact' ? 'h-[30px]' : 'h-8'
   $: buttonSquare = view == 'compact' ? 'w-[30px] h-[30px]' : 'w-8 h-8'
 </script>
 
 {#if fediseerData}
-  <Fediseer bind:open={fediseerOpen} data={fediseerData} />
+  {#await import('$lib/fediseer/Fediseer.svelte') then { default: Fediseer }}
+    <Fediseer bind:open={fediseerOpen} data={fediseerData} />
+  {/await}
 {/if}
 
 {#if editing}
@@ -127,12 +116,6 @@
   {/await}
 {/if}
 
-{#if mediaBias && post.post.url}
-  {#await import('$lib/components/mbfc/MBFCModal.svelte') then { default: MbfcModal }}
-    <MbfcModal domain={stripSubdomain(post.post.url)} bind:open={mediaBias} />
-  {/await}
-{/if}
-
 <div
   class="flex flex-row gap-2 items-center flex-shrink-0 {buttonHeight}"
   style={$$props.style ?? ''}
@@ -147,14 +130,20 @@
 
   <Button
     size="sm"
-    href="/post/{getInstance()}/{post.post.id}"
-    class="!text-inherit h-full px-3"
+    href={postLink(post.post)}
+    class="!text-inherit h-full px-3 relative"
     color="ghost"
     rounding="pill"
     target={$userSettings.openLinksInNewTab ? '_blank' : ''}
     title={$t('post.actions.comments')}
   >
-    <Icon slot="prefix" src={ChatBubbleOvalLeft} size="18" />
+    {@const newComment =
+      publishedToDate(post.counts.newest_comment_time).getTime() >
+      new Date().getTime() - 5 * 60 * 1000}
+    <Icon
+      src={newComment ? ChatBubbleOvalLeftEllipsis : ChatBubbleOvalLeft}
+      size="18"
+    />
     <FormattedNumber number={post.counts.comments} />
   </Button>
   <div class="ml-auto" />
@@ -173,7 +162,7 @@
       rounding="pill"
       class={buttonSquare}
     >
-      <Icon src={BugAnt} mini size="16" slot="prefix" />
+      <Icon src={BugAnt} micro size="16" slot="prefix" />
     </Button>
   {/if}
   {#if $profile?.user && (amMod($profile.user, post.community) || isAdmin($profile.user))}
@@ -227,14 +216,14 @@
       size="custom"
       class={buttonSquare}
     >
-      <Icon slot="prefix" src={EllipsisHorizontal} width={16} mini />
+      <Icon slot="prefix" src={EllipsisHorizontal} width={16} micro />
     </Button>
     <MenuDivider>{$t('post.actions.more.creator')}</MenuDivider>
     <MenuButton
       link
       href="/u/{post.creator.name}@{new URL(post.creator.actor_id).hostname}"
     >
-      <Icon src={UserCircle} width={16} mini slot="prefix" />
+      <Icon src={UserCircle} size="16" micro slot="prefix" />
       <span>{post.creator.name}</span>
     </MenuButton>
     <MenuButton
@@ -242,7 +231,7 @@
       href="/c/{post.community.name}@{new URL(post.community.actor_id)
         .hostname}"
     >
-      <Icon src={Newspaper} width={16} mini slot="prefix" />
+      <Icon src={Newspaper} size="16" micro slot="prefix" />
       <span>{post.community.title}</span>
     </MenuButton>
     <MenuButton
@@ -265,7 +254,7 @@
         {#if fediseerLoading}
           <Spinner width={14} />
         {:else}
-          <Icon src={ServerStack} width={16} mini />
+          <Icon src={ServerStack} size="16" micro />
         {/if}
       </svelte:fragment>
       <span>{new URL(post.community.actor_id).hostname}</span>
@@ -274,7 +263,7 @@
     <MenuDivider>{$t('post.actions.more.actions')}</MenuDivider>
     {#if $profile?.user && $profile?.jwt && $profile.user.local_user_view.person.id == post.creator.id}
       <MenuButton on:click={() => (editing = true)}>
-        <Icon src={PencilSquare} width={16} mini slot="prefix" />
+        <Icon src={PencilSquare} size="16" micro slot="prefix" />
         {$t('post.actions.more.edit')}
       </MenuButton>
     {/if}
@@ -285,16 +274,10 @@
             post.read = await markAsRead(post.post, !post.read, $profile.jwt)
         }}
       >
-        <Icon slot="prefix" src={post.read ? EyeSlash : Eye} width={16} mini />
+        <Icon slot="prefix" src={post.read ? EyeSlash : Eye} size="16" micro />
         {post.read
           ? $t('post.actions.more.markUnread')
           : $t('post.actions.more.markRead')}
-      </MenuButton>
-    {/if}
-    {#if post.post.url && type == 'embed'}
-      <MenuButton on:click={() => (mediaBias = !mediaBias)}>
-        <Icon src={CheckBadge} micro size="16" slot="prefix" />
-        {$t('post.actions.more.mediaBias')}
       </MenuButton>
     {/if}
     <MenuButton
@@ -313,7 +296,7 @@
       }}
       class="flex-1 !py-0"
     >
-      <Icon src={Share} width={16} mini slot="prefix" />
+      <Icon src={Share} size="16" micro slot="prefix" />
       {$t('post.actions.more.share')}
       {#if !post.post.local}
         <Switch
@@ -336,7 +319,7 @@
           translating = !translating
         }}
       >
-        <Icon src={Language} size="16" mini slot="prefix" />
+        <Icon src={Language} size="16" micro slot="prefix" />
         {$t('post.actions.more.translate')}
       </MenuButton>
     {/if}
@@ -364,7 +347,7 @@
           goto('/create/post?crosspost=true')
         }}
       >
-        <Icon src={ArrowTopRightOnSquare} width={16} mini slot="prefix" />
+        <Icon src={ArrowTopRightOnSquare} size="16" micro slot="prefix" />
         {$t('post.actions.more.crosspost')}
       </MenuButton>
       {#if $profile.user && post.creator.id == $profile.user.local_user_view.person.id}
@@ -379,7 +362,7 @@
           }}
           color="danger-subtle"
         >
-          <Icon src={Trash} width={16} mini slot="prefix" />
+          <Icon src={Trash} size="16" micro slot="prefix" />
           {post.post.deleted
             ? $t('post.actions.more.restore')
             : $t('post.actions.more.delete')}
@@ -402,14 +385,14 @@
             }}
             color="danger-subtle"
           >
-            <Icon slot="prefix" src={XMark} size="16" mini />
+            <Icon slot="prefix" src={XMark} size="16" micro />
             {post.hidden
               ? $t('post.actions.more.unhide')
               : $t('post.actions.more.hide')}
           </MenuButton>
         {/if}
         <MenuButton on:click={() => report(post)} color="danger-subtle">
-          <Icon src={Flag} width={16} mini slot="prefix" />
+          <Icon src={Flag} width={16} micro slot="prefix" />
           {$t('moderation.report')}
         </MenuButton>
       {/if}

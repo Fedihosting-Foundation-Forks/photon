@@ -9,13 +9,19 @@
   import { afterNavigate, goto } from '$app/navigation'
   import { profile, profileData } from '$lib/auth'
   import { getGroups, type Action, type Group } from './actions'
+  import { themeData } from '$lib/ui/colors'
 
   export let open = false
   $: if (open) search = ''
 
   export let groups: Group[] = []
 
-  $: groups = getGroups($resumables, $profile, $profileData.profiles)
+  $: groups = getGroups(
+    $resumables,
+    $profile,
+    $profileData.profiles,
+    $themeData
+  )
 
   let search = ''
   let container: HTMLElement
@@ -228,7 +234,7 @@
 
 <svelte:window on:keydown={handleKeydown} />
 
-<TextInput bind:value={search} autofocus class="sticky" />
+<TextInput bind:value={search} autofocus class="sticky font-mono" />
 <div class="h-96 overflow-auto border-slate-200 dark:border-zinc-800">
   {#if breadcrumbs.length > 0}
     <div class="flex items-center gap-2 my-1">

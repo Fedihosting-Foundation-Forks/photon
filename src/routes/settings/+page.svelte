@@ -29,6 +29,7 @@
     ChevronRight,
     GlobeAmericas,
     Icon,
+    Language,
     Plus,
     Trash,
   } from 'svelte-hero-icons'
@@ -41,12 +42,32 @@
   import Section from './Section.svelte'
   import ToggleSetting from './ToggleSetting.svelte'
   import { locale, locales, t } from '$lib/translations'
-  import { defaultLinks, iconOfLink } from '$lib/components/ui/navbar/link'
+  import { getDefaultLinks, iconOfLink } from '$lib/components/ui/navbar/link'
   import Header from '$lib/components/ui/layout/pages/Header.svelte'
 
   let pin: string = ''
   let importing = false
   let importText = ''
+
+  let localeMap: Map<
+    string,
+    {
+      name: string
+      translated: number
+      flag: string
+    }
+  > = new Map([
+    ['en', { name: 'English', translated: 1, flag: '🇬🇧' }],
+    ['et', { name: 'Eesti keel', translated: 0.24, flag: '🇪🇪' }],
+    ['de', { name: 'Deutsch', translated: 0.77, flag: '🇩🇪' }],
+    ['fi', { name: 'Suomi', translated: 0.95, flag: '🇫🇮' }],
+    ['fr', { name: 'Français', translated: 0.79, flag: '🇫🇷' }],
+    ['he', { name: 'עברית', translated: 0.39, flag: '🇮🇱' }],
+    ['nl', { name: 'Nederlands', translated: 0.97, flag: '🇳🇱' }],
+    ['pt', { name: 'Português', translated: 0.95, flag: '🇵🇹' }],
+    ['zh-Hans', { name: '简体中文', translated: 0.91, flag: '🇨🇳' }],
+    ['zh-Hant', { name: '繁體中文', translated: 0.25, flag: '🇭🇰' }],
+  ])
 </script>
 
 <svelte:head>
@@ -165,7 +186,7 @@
         {$t('settings.navigation.pins.description')}
       </span>
       <div class="flex items-center gap-1 flex-wrap">
-        {#each defaultLinks as pin}
+        {#each getDefaultLinks() as pin}
           <Popover openOnHover placement="bottom">
             <Button
               size="square-md"
@@ -187,7 +208,7 @@
               padding="none"
               class="px-4 py-2 flex flex-col"
             >
-              <span class="font-medium text-lg">{pin.label}</span>
+              <span class="font-medum text-base">{pin.label}</span>
               <code class="bg-slate-50 dark:!bg-zinc-950 !rounded-md">
                 {pin.url}
               </code>
@@ -207,23 +228,32 @@
         </span>
         <p slot="description">
           {$t('settings.app.lang.description')}
-          <Note>
-            {$t('settings.app.lang.note')}
-          </Note>
           <Link href="/translators" highlight class="text-base font-semibold">
             {$t('settings.app.lang.credits')}
           </Link>
         </p>
+        <!--@ts-ignore-->
         <Select bind:value={$userSettings.language}>
-          <option value={null}>{$t('settings.app.lang.auto')}</option>
+          <option value={null}>
+            <Icon src={Language} size="16" mini />
+            {$t('settings.app.lang.auto')}
+          </option>
           {#each $locales as locale}
+            {@const mapped = localeMap.get(locale) ?? {
+              flag: '',
+              translated: 1,
+              name: locale,
+            }}
             <option value={locale}>
-              {$t(`settings.app.lang.${locale}`, { default: locale })}
+              <span>{mapped?.flag}</span>
+              <span>{mapped?.name}</span>
+              <div
+                class="text-slate-600 dark:text-zinc-400 text-xs ml-auto"
+                data-hide-selected
+                data-label="{mapped.translated * 100}%"
+              ></div>
             </option>
           {/each}
-          {#if $userSettings.debugInfo}
-            <option value="dev">Raw Strings</option>
-          {/if}
         </Select>
       </Setting>
       {#if $locale == 'he'}
@@ -298,11 +328,6 @@
       description={$t('settings.app.postsInNewTab.description')}
     />
     <ToggleSetting
-      bind:checked={$userSettings.displayNames}
-      title={$t('settings.app.displayName.title')}
-      description={$t('settings.app.displayName.description')}
-    />
-    <ToggleSetting
       supportedPlatforms={{ desktop: true, tablet: false, mobile: false }}
       bind:checked={$userSettings.newWidth}
       title={$t('settings.app.limitLayoutWidth.title')}
@@ -337,14 +362,15 @@
         bind:selected={$userSettings.leftAlign}
       />
     </Setting>
-    <Setting itemsClass="flex-col !items-start">
+    <Setting>
       <span slot="title">{$t('settings.app.font.title')}</span>
       <span slot="description">{$t('settings.app.font.description')}</span>
-      <MultiSelect
-        options={['inter', 'satoshi/nunito', 'system', 'browser']}
-        optionNames={['Inter', 'Satoshi/Nunito', 'System UI', 'Browser Font']}
-        bind:selected={$userSettings.font}
-      />
+      <Select bind:value={$userSettings.font}>
+        <option value="inter">Inter</option>
+        <option value="satoshi/nunito">Satoshi + Nunito</option>
+        <option value="system">System UI</option>
+        <option value="browser">Browser</option>
+      </Select>
     </Setting>
     <Setting>
       <span slot="title">{$t('settings.app.theming.title')}</span>
@@ -460,7 +486,7 @@
     <ToggleSetting
       bind:checked={$userSettings.markReadPosts}
       title={$t('settings.lemmy.fadeReadPosts.title')}
-      description={$t('settings.lemmy.fadeReadPosts.title')}
+      description={$t('settings.lemmy.fadeReadPosts.description')}
     />
     <ToggleSetting
       bind:checked={$userSettings.crosspostOriginalLink}
@@ -503,6 +529,11 @@
         </Checkbox>
       </div>
     </Setting>
+    <ToggleSetting
+      bind:checked={$userSettings.displayNames}
+      title={$t('settings.app.displayName.title')}
+      description={$t('settings.app.displayName.description')}
+    />
   </Section>
 
   <Section title={$t('settings.moderation.title')}>
@@ -603,5 +634,17 @@
       title={$t('settings.other.debug.title')}
       description={$t('settings.other.debug.description')}
     />
+    <ToggleSetting
+      bind:checked={$userSettings.posts.noVirtualize}
+      title={$t('settings.other.virtualizeFeeds.title')}
+      description={$t('settings.other.virtualizeFeeds.description')}
+    />
   </Section>
 </div>
+
+<style>
+  [data-hide-selected]::before {
+    content: attr(data-label);
+    font-size: small;
+  }
+</style>

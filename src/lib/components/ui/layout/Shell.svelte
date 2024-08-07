@@ -165,7 +165,6 @@
   }
   .content > * {
     width: 100%; /* Full width for immediate children */
-    max-width: 100rem; /* Limit width */
     padding: 0 1rem; /* Add some padding on smaller screens */
   }
 

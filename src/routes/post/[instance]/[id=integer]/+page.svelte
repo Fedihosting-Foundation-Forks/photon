@@ -18,10 +18,19 @@
     Icon,
     InformationCircle,
     Home,
+    PlusCircle,
+    ChatBubbleLeftRight,
   } from 'svelte-hero-icons'
-  import PostLink from '$lib/components/lemmy/post/PostLink.svelte'
+  import PostLink from '$lib/components/lemmy/post/link/PostLink.svelte'
   import PostMeta from '$lib/components/lemmy/post/PostMeta.svelte'
-  import { Material, Select, Spinner, removeToast, toast } from 'mono-svelte'
+  import {
+    Material,
+    Select,
+    Spinner,
+    buttonColor,
+    removeToast,
+    toast,
+  } from 'mono-svelte'
   import type { CommentSortType } from 'lemmy-js-client'
   import { profile } from '$lib/auth.js'
   import { instance } from '$lib/instance.js'
@@ -44,6 +53,9 @@
   import { t } from '$lib/translations.js'
   import { createWindowVirtualizer } from '@tanstack/svelte-virtual'
   import { resumables } from '$lib/lemmy/item.js'
+  import { contentPadding } from '$lib/components/ui/layout/Shell.svelte'
+  import Placeholder from '$lib/components/ui/Placeholder.svelte'
+  import CommentListVirtualizer from '$lib/components/lemmy/comment/CommentListVirtualizer.svelte'
 
   export let data
 
@@ -156,12 +168,22 @@
     <meta property="twitter:card" content={post.post_view.post.thumbnail_url} />
   {/if}
   {#if post.post_view.post.body}
-    <meta property="og:description" content={post.post_view.post.body} />
-    <meta property="twitter:description" content={post.post_view.post.body} />
+    <meta
+      property="description"
+      content={post.post_view.post.body.slice(0, 500)}
+    />
+    <meta
+      property="og:description"
+      content={post.post_view.post.body.slice(0, 500)}
+    />
+    <meta
+      property="twitter:description"
+      content={post.post_view.post.body.slice(0, 500)}
+    />
   {/if}
 </svelte:head>
 
-<div class="flex flex-col gap-2">
+<article class="flex flex-col gap-2">
   {#if remoteView}
     <div
       class="sticky top-0 bg-slate-50 dark:bg-zinc-950 z-20
@@ -199,8 +221,8 @@
     </div>
   {/if}
 
-  <div class="flex flex-row justify-between items-center gap-2 flex-wrap">
-    <div class="w-max">
+  <header class="flex flex-col gap-2">
+    <div class="flex flex-row justify-between items-center gap-2 flex-wrap">
       <PostMeta
         community={post.post_view.community}
         user={post.post_view.creator}
@@ -219,24 +241,23 @@
         }}
         published={publishedToDate(post.post_view.post.published)}
         bind:title={post.post_view.post.name}
+        style="width: max-content;"
       />
+      <Button on:click={() => history.back()} size="square-md">
+        <Icon src={ArrowLeft} mini size="16" slot="prefix" />
+      </Button>
     </div>
-    <Button on:click={() => history.back()} size="square-md">
-      <Icon src={ArrowLeft} mini size="16" slot="prefix" />
-    </Button>
-  </div>
-  <h1 class="font-bold text-lg font-display leading-5">
-    <Markdown source={post.post_view.post.name} inline />
-  </h1>
+    <h1 class="font-bold text-xl font-display leading-5">
+      <Markdown source={post.post_view.post.name} inline />
+    </h1>
+  </header>
   <PostMedia
     type={mediaType(post.post_view.post.url)}
     post={post.post_view.post}
     opened
   />
   {#if post.post_view.post.body}
-    <div
-      class="text-sm text-slate-800 dark:text-zinc-300 rounded-md leading-[22px]"
-    >
+    <div class="text-base text-slate-800 dark:text-zinc-300 leading-[1.5]">
       <Markdown source={post.post_view.post.body} />
     </div>
   {/if}
@@ -272,72 +293,48 @@
       </div>
     </Expandable>
   {/if}
-</div>
-{#if data.thread.showContext}
-  <Material
-    elevation="max"
-    padding="none"
-    color="distinct"
-    class="py-2 px-4 text-sm flex flex-row justify-between items-center
-flex-wrap gap-4 sticky top-20 w-full box-border z-20 mt-4"
+</article>
+{#if data.thread.showContext || data.thread.singleThread}
+  <div
+    class="sticky mx-auto z-50 max-w-lg w-full min-w-0 flex items-center overflow-auto gap-1
+    bg-slate-50/50 dark:bg-zinc-900/50 backdrop-blur-xl border border-slate-200/50 dark:border-zinc-800/50
+    p-1 rounded-full px-2.5 justify-between"
+    style="top: max(1.5rem, {$contentPadding.top}px);"
   >
     <p class="font-medium text-sm flex items-center gap-2">
       <Icon src={InformationCircle} mini size="20" />
-      {$t('routes.post.thread.part')}
+      {data.thread.showContext
+        ? $t('routes.post.thread.part')
+        : $t('routes.post.thread.single')}
     </p>
     <Button
+      color="none"
+      rounding="pill"
       {loading}
       disabled={loading}
-      href="/comment/{$page.params.instance}/{data.thread.showContext}"
+      href={data.thread.showContext
+        ? `/comment/${$page.params.instance}/${data.thread.showContext}`
+        : undefined}
+      class="hover:bg-white/50 dark:hover:bg-zinc-800/30"
+      on:click={data.thread.singleThread ? reloadComments : undefined}
     >
-      {$t('routes.post.thread.context')}
+      {data.thread.showContext
+        ? $t('routes.post.thread.context')
+        : $t('routes.post.thread.allComments')}
     </Button>
-  </Material>
-{:else if data.thread.singleThread}
-  <Material
-    elevation="max"
-    padding="none"
-    color="distinct"
-    class="py-2 px-4 text-sm flex sm:flex-row justify-between items-center
-    sm:gap-4 sticky top-20 w-full box-border z-20 mt-4 flex-col gap-2"
-  >
-    <p class="font-medium text-sm flex items-center gap-2">
-      <Icon src={InformationCircle} mini size="20" />
-      {$t('routes.post.thread.single')}
-    </p>
-    <Button {loading} disabled={loading} on:click={reloadComments}>
-      {$t('routes.post.thread.allComments')}
-    </Button>
-  </Material>
+  </div>
 {/if}
-<div class="mt-4 flex flex-col gap-2 w-full">
-  <div class="flex flex-row justify-between flex-wrap gap-2">
+<section class="mt-4 flex flex-col gap-2 w-full">
+  <header>
     <div class="text-base">
       <span class="font-bold">
         <FormattedNumber number={post.post_view.counts.comments} />
       </span>
       {$t('routes.post.commentCount')}
     </div>
-    <div class="gap-2 flex items-center h-8">
-      <Select
-        size="sm"
-        class="!h-full"
-        bind:value={commentSort}
-        on:change={reloadComments}
-      >
-        <option value="Hot">{$t('filter.sort.hot')}</option>
-        <option value="Top">{$t('filter.sort.top.label')}</option>
-        <option value="New">{$t('filter.sort.new')}</option>
-        <option value="Old">{$t('filter.sort.old')}</option>
-        <option value="Controversial">{$t('filter.sort.controversial')}</option>
-      </Select>
-      <Button size="square-md" on:click={reloadComments}>
-        <Icon src={ArrowPath} size="16" mini slot="prefix" />
-      </Button>
-    </div>
-  </div>
+  </header>
   {#await data.comments}
-    <div class="flex flex-col gap-4">
+    <div class="space-y-4">
       {#each new Array(10) as empty}
         <div class="animate-pulse flex flex-col gap-2 skeleton w-full">
           <div class="w-96 h-4" />
@@ -348,30 +345,75 @@ flex-wrap gap-4 sticky top-20 w-full box-border z-20 mt-4"
     </div>
   {:then comments}
     {#if $profile?.jwt}
-      <CommentForm
-        postId={post.post_view.post.id}
-        on:comment={(comment) =>
-          (comments.comments = [
-            comment.detail.comment_view,
-            ...comments.comments,
-          ])}
-        locked={(post.post_view.post.locked &&
-          !(
-            $profile?.user?.local_user_view.local_user.admin ||
-            $profile?.user?.moderates
-              .map((c) => c.community.id)
-              .includes(data.post.community_view.community.id)
-          )) ||
-          $page.params.instance.toLowerCase() != $instance.toLowerCase()}
-        banned={data.post.community_view.banned_from_community}
-        on:focus={() => (commenting = true)}
-        tools={commenting}
-        preview={commenting}
-        placeholder={commenting ? undefined : $t('routes.post.addComment')}
-        rows={commenting ? 7 : 1}
-      />
+      {#if !commenting}
+        <EndPlaceholder class="">
+          <Button color="primary" on:click={() => (commenting = true)}>
+            <Icon src={PlusCircle} size="16" micro />
+            {$t('routes.post.addComment')}
+          </Button>
+
+          <div class="gap-2 flex items-center" slot="action">
+            <Select
+              size="md"
+              bind:value={commentSort}
+              on:change={reloadComments}
+            >
+              <option value="Hot">{$t('filter.sort.hot')}</option>
+              <option value="Top">{$t('filter.sort.top.label')}</option>
+              <option value="New">{$t('filter.sort.new')}</option>
+              <option value="Old">{$t('filter.sort.old')}</option>
+              <option value="Controversial">
+                {$t('filter.sort.controversial')}
+              </option>
+            </Select>
+            <Button size="square-md" on:click={reloadComments}>
+              <Icon src={ArrowPath} size="16" mini slot="prefix" />
+            </Button>
+          </div>
+        </EndPlaceholder>
+      {:else}
+        <CommentForm
+          postId={post.post_view.post.id}
+          on:comment={(comment) =>
+            (comments.comments = [
+              comment.detail.comment_view,
+              ...comments.comments,
+            ])}
+          locked={(post.post_view.post.locked &&
+            !(
+              $profile?.user?.local_user_view.local_user.admin ||
+              $profile?.user?.moderates
+                .map((c) => c.community.id)
+                .includes(data.post.community_view.community.id)
+            )) ||
+            $page.params.instance.toLowerCase() != $instance.toLowerCase()}
+          banned={data.post.community_view.banned_from_community}
+          on:focus={() => (commenting = true)}
+          tools={commenting}
+          preview={commenting}
+          placeholder={commenting ? undefined : $t('routes.post.addComment')}
+          rows={commenting ? 7 : 1}
+        />
+      {/if}
     {/if}
-    <Comments
+
+    {#if commenting || !$profile.jwt}
+      <div class="gap-2 flex items-center">
+        <Select size="md" bind:value={commentSort} on:change={reloadComments}>
+          <option value="Hot">{$t('filter.sort.hot')}</option>
+          <option value="Top">{$t('filter.sort.top.label')}</option>
+          <option value="New">{$t('filter.sort.new')}</option>
+          <option value="Old">{$t('filter.sort.old')}</option>
+          <option value="Controversial">
+            {$t('filter.sort.controversial')}
+          </option>
+        </Select>
+        <Button size="square-md" on:click={reloadComments}>
+          <Icon src={ArrowPath} size="16" mini slot="prefix" />
+        </Button>
+      </div>
+    {/if}
+    <CommentListVirtualizer
       post={post.post_view.post}
       nodes={buildCommentsTree(
         comments.comments,
@@ -382,8 +424,14 @@ flex-wrap gap-4 sticky top-20 w-full box-border z-20 mt-4"
             ($userSettings.hidePosts.removed && c.comment.removed)
           )
       )}
-      isParent={true}
     />
+    {#if comments.comments.length == 0}
+      <Placeholder
+        icon={ChatBubbleLeftRight}
+        title={$t('routes.post.emptyComments.title')}
+        description={$t('routes.post.emptyComments.description')}
+      ></Placeholder>
+    {/if}
   {/await}
   {#if post.post_view.counts.comments > 5}
     <EndPlaceholder>
@@ -402,7 +450,7 @@ flex-wrap gap-4 sticky top-20 w-full box-border z-20 mt-4"
       </Button>
     </EndPlaceholder>
   {/if}
-</div>
+</section>
 
 <style lang="postcss">
   .skeleton * {

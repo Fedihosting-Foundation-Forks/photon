@@ -33,6 +33,11 @@ const config: Config = {
       loader: async () => (await import('./i18n/he.json')).default,
     },
     {
+      locale: 'nl',
+      key: '',
+      loader: async () => (await import('./i18n/nl.json')).default,
+    },
+    {
       locale: 'pt',
       key: '',
       loader: async () => (await import('./i18n/pt.json')).default,
@@ -50,6 +55,26 @@ const config: Config = {
   ],
   fallbackLocale: 'en',
 }
+
+export const aliases = new Map([
+  ['zh-CN', 'zh-Hans'],
+  ['zh-TW', 'zh-Hant'],
+  ['en-US', 'en'],
+  ['en-GB', 'en'],
+  ['en-AU', 'en'],
+  ['en-CA', 'en'],
+  ['fr-FR', 'fr'],
+  ['fr-CA', 'fr'],
+  ['fr-BE', 'fr'],
+  ['de-DE', 'de'],
+  ['de-AT', 'de'],
+  ['de-CH', 'de'],
+  ['pt-BR', 'pt'],
+  ['pt-PT', 'pt'],
+  ['fi-FI', 'fi'],
+  ['et-EE', 'et'],
+  ['he-IL', 'he'],
+])
 
 export const { t, locale, locales, loading, loadTranslations } = new i18n(
   config
